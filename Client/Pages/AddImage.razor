@@ -1,0 +1,56 @@
+﻿@page "/addimage"
+@using BlazorApp.Shared.Models
+@inject HttpClient HttpClient
+@inject NavigationManager NavigationManager
+@inject IJSRuntime IJSRuntime
+
+<h3>Upload Files</h3>
+
+<p>
+    <label>
+        <InputFile OnChange="@OnUploadFileChanged" />
+        <img @ref="titi" src="@image.Base64String" style="width: 300px; height: 300px; display: flex; padding: 4px;" />
+        <button @onclick="UploadImage" >Upload Image</button>
+    </label>
+    <button @onclick="jsTest">Test JS</button>
+</p>
+
+@code {
+    protected Image image = new();
+    protected long maxFileSize { get; set; }
+    protected IBrowserFile test { get; set; }
+    protected byte[] buf { get; set; }
+    ElementReference titi;
+
+    private async Task OnUploadFileChanged(InputFileChangeEventArgs e)
+    {
+        var imageFile = e.File;
+        test = imageFile;
+        var buffer = new byte[imageFile.Size];
+        buf = buffer;
+        maxFileSize = imageFile.Size * 2;
+        await imageFile.OpenReadStream(maxFileSize).ReadAsync(buffer);
+        image.Base64String = $"data:{image.ContentType};base64,{Convert.ToBase64String(buffer)}";
+        image.FileName = imageFile.Name;
+        image.ContentType = imageFile.ContentType;
+        image.FileSize = imageFile.Size.ToString();
+        Console.WriteLine(titi);
+    }
+
+    protected async Task UploadImage()
+    {
+        await HttpClient.PostAsJsonAsync("https://localhost:7293/images", image);
+        Cancel();
+    }
+
+    private void Cancel()
+    {
+        NavigationManager.NavigateTo("/viewimages");
+    }
+
+    private async Task jsTest()
+    {
+        
+        await IJSRuntime.InvokeVoidAsync("compressImage", test, buf);
+    }
+}
